@@ -23,6 +23,7 @@ interface FileProcessorProps {
 export default function FileProcessor({ title, processType }: FileProcessorProps) {
   const [selectedFolder, setSelectedFolder] = useState<string>('');
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
+  const [allFiles, setAllFiles] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
@@ -34,16 +35,14 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
 
   const handleFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    console.log("handleFilesChange: ", files);
     if (!files) return;
 
-    // Lấy tên file và tạo tree
     const tree: FileNode[] = [];
     const folderMap: Record<string, FileNode> = {};
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const pathParts = file.webkitRelativePath.split('/'); // browser chỉ hỗ trợ webkitRelativePath
+      const pathParts = file.webkitRelativePath.split('/');
       let currentLevel = tree;
 
       for (let j = 0; j < pathParts.length; j++) {
@@ -53,30 +52,33 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
         if (isFile) {
           currentLevel.push({ name: part, type: 'file' });
         } else {
-          if (!folderMap[pathParts.slice(0, j + 1).join('/')]) {
+          const folderKey = pathParts.slice(0, j + 1).join('/');
+          if (!folderMap[folderKey]) {
             const newFolder: FileNode = { name: part, type: 'folder', children: [] };
-            folderMap[pathParts.slice(0, j + 1).join('/')] = newFolder;
+            folderMap[folderKey] = newFolder;
             currentLevel.push(newFolder);
           }
-          currentLevel = folderMap[pathParts.slice(0, j + 1).join('/')].children!;
+          currentLevel = folderMap[folderKey].children!;
         }
       }
     }
 
     setSelectedFolder(files[0] ? files[0].webkitRelativePath.split('/')[0] : '');
     setFileTree(tree);
+    setAllFiles(extractAllFiles(tree)); // lưu danh sách file vào state
     setLogs([]);
   };
 
   const handleStartProcessing = async () => {
-    console.log("Starting processing...", selectedFolder);
+    if (!selectedFolder) return;
+
     setIsProcessing(true);
     setLogs([]);
+    const files = extractAllFiles(fileTree);
+    setAllFiles(files);
 
-    const allFiles = extractAllFiles(fileTree);
-
-    for (let i = 0; i < allFiles.length; i++) {
-      const file = allFiles[i];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       const logId = `${Date.now()}-${i}`;
 
       setLogs((prev) => [
@@ -90,23 +92,53 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
         },
       ]);
 
-      await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 400));
+      try {
+        // Gọi API POST
+        const response = await fetch(`http://0.0.0.0:8000/api/${processType}/process/start/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ file_pdf: file }),
+        });
+        const data = await response.json();
 
-      const success = Math.random() > 0.2;
-
-      setLogs((prev) =>
-        prev.map((log) =>
-          log.id === logId
-            ? {
-                ...log,
-                status: success ? 'success' : 'error',
-                message: success
-                  ? `Successfully processed ${file} - ${processType} detected and renamed`
-                  : `Failed to process ${file} - ${processType} not found`,
-              }
-            : log
-        )
-      );
+        if (response.ok) {
+          setLogs((prev) =>
+            prev.map((log) =>
+              log.id === logId
+                ? {
+                    ...log,
+                    status: 'success',
+                    message: `Successfully processed ${file}: ${JSON.stringify(data)}`,
+                  }
+                : log
+            )
+          );
+        } else {
+          setLogs((prev) =>
+            prev.map((log) =>
+              log.id === logId
+                ? {
+                    ...log,
+                    status: 'error',
+                    message: `Failed to process ${file}: ${data.detail || 'Unknown error'}`,
+                  }
+                : log
+            )
+          );
+        }
+      } catch (error: any) {
+        setLogs((prev) =>
+          prev.map((log) =>
+            log.id === logId
+              ? {
+                  ...log,
+                  status: 'error',
+                  message: `Failed to process ${file}: ${error.message}`,
+                }
+              : log
+          )
+        );
+      }
     }
 
     setIsProcessing(false);
@@ -148,6 +180,10 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
     ));
   };
 
+  const processedCount = logs.filter((log) => log.status === 'success' || log.status === 'error').length;
+  const inProgressCount = logs.filter((log) => log.status === 'processing').length;
+  const progressPercent = allFiles.length ? (processedCount / allFiles.length) * 100 : 0;
+
   return (
     <div className="p-8">
       <input
@@ -161,12 +197,13 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
 
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-800 mb-2">{title}</h2>
-        <p className="text-gray-600">Phát hiện và đọc thông tin từ {processType}, sau đó đổi tên file</p>
+        <p className="text-gray-600">
+          Phát hiện và đọc thông tin từ {processType}, sau đó đổi tên file
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-
           <button
             onClick={handleSelectFolder}
             disabled={isProcessing}
@@ -181,6 +218,19 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600 mb-1">Thư mục đã chọn:</p>
                 <p className="text-sm font-medium text-gray-800">{selectedFolder}</p>
+              </div>
+
+              {/* Card tiến trình */}
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-700 mb-1">
+                  Đã xử lý: {processedCount} / {allFiles.length} | Đang xử lý: {inProgressCount}
+                </p>
+                <div className="w-full h-3 bg-gray-200 rounded-full">
+                  <div
+                    className="h-3 bg-green-500 rounded-full transition-all duration-300"
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
+                </div>
               </div>
 
               <div className="mb-6 p-4 bg-gray-50 rounded-lg max-h-64 overflow-y-auto">
@@ -233,9 +283,7 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
                     <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 break-words">
-                      {log.filename}
-                    </p>
+                    <p className="text-sm font-medium text-gray-800 break-words">{log.filename}</p>
                     <p className="text-xs text-gray-600 mt-1">{log.message}</p>
                     <p className="text-xs text-gray-500 mt-1">{log.timestamp}</p>
                   </div>

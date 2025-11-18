@@ -8,3 +8,4 @@ pyzbar==0.1.9
 qreader==3.16
 PyPDF2==3.0.1
 pdf2image==1.17.0
+django-cors-headers
