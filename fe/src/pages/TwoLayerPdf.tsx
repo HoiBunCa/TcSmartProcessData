@@ -187,7 +187,7 @@ export default function TwoLayerPdf() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">2-Layer PDF</h2>
+        <h2 className="text-3xl font-bold text-gray-800 mb-2">Chức năng chạy PDF 2 lớp</h2>
         <p className="text-gray-600">Process PDFs into 2-layer format</p>
       </div>
 

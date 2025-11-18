@@ -8,10 +8,10 @@ interface LayoutProps {
 }
 
 const menuItems = [
-  { id: 'statistics' as Page, label: 'Statistical Report', icon: BarChart3 },
-  { id: 'qrcode' as Page, label: 'Naming by QRcode', icon: QrCode },
-  { id: 'barcode' as Page, label: 'Naming by Barcode', icon: Barcode },
-  { id: 'pdf' as Page, label: '2-layer Pdf', icon: FileType },
+  { id: 'statistics' as Page, label: 'Thống kê', icon: BarChart3 },
+  { id: 'qrcode' as Page, label: 'Đặt tên theo qrcode', icon: QrCode },
+  { id: 'barcode' as Page, label: 'Đặt tên theo barcode', icon: Barcode },
+  { id: 'pdf' as Page, label: 'PDF 2 lớp', icon: FileType },
 ];
 
 export default function Layout({ children }: LayoutProps) {

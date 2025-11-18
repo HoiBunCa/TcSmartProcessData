@@ -1,5 +1,5 @@
 services:
-  backend:
+  be:
     build:
       context: ../be
     container_name: be
@@ -12,8 +12,10 @@ services:
       - "./static:/usr/src/app/static"
     env_file:
       - ../be/.env
+    ports:
+      - "18000:8000"
 
-  frontend:
+  fe:
     build:
       context: ../fe
     container_name: fe
