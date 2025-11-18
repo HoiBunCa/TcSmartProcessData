@@ -100,7 +100,7 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
           body: JSON.stringify({ file_pdf: file }),
         });
         const data = await response.json();
-
+        console.log(data);
         if (response.ok) {
           setLogs((prev) =>
             prev.map((log) =>
@@ -108,7 +108,7 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
                 ? {
                     ...log,
                     status: 'success',
-                    message: `Successfully processed ${file}: ${JSON.stringify(data)}`,
+                    message: `Đổi tên thành công: ${data.barcode_data}`,
                   }
                 : log
             )
@@ -283,8 +283,8 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
                     <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 break-words">{log.filename}</p>
-                    <p className="text-xs text-gray-600 mt-1">{log.message}</p>
+                    <p className="text-xs text-gray-600 mt-1">{log.filename}</p>
+                    <p className="text-sm font-medium text-gray-800 break-words">{log.message}</p>
                     <p className="text-xs text-gray-500 mt-1">{log.timestamp}</p>
                   </div>
                 </div>
