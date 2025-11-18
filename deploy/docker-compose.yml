@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: ../be
+    container_name: be
+    image: nexus.tcgroup.vn/tcsoft/smart_process_data_be:0.0.1
+    restart: always
+    platform: linux/amd64
+    volumes:
+      - "./media:/usr/src/app/media"
+      - "./:/usr/src/app"
+      - "./static:/usr/src/app/static"
+    env_file:
+      - ../be/.env
+
+  frontend:
+    build:
+      context: ../fe
+    container_name: fe
+    image: nexus.tcgroup.vn/tcsoft/smart_process_data_fe:0.0.1
+    restart: always
+    platform: linux/amd64
+    ports:
+      - "18001:80"
+    depends_on:
+      - be
+
+
+

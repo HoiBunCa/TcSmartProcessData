@@ -20,8 +20,8 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path('qrcode/', include('app_RenameQrCode.urls')),
-    path('barcode/', include('app_RenameBarCode.urls')),
-    path('pdf2layer/', include('app_Pdf2Layer.urls')),
+    path('api/qrcode/', include('app_RenameQrCode.urls')),
+    path('api/barcode/', include('app_RenameBarCode.urls')),
+    path('api/pdf2layer/', include('app_Pdf2Layer.urls')),
 
 ]
