@@ -11,9 +11,9 @@ function App() {
           case 'statistics':
             return <StatisticalReport />;
           case 'qrcode':
-            return <FileProcessor title="Naming by QRcode" processType="qrcode" />;
+            return <FileProcessor title="Đặt tên theo QR code" processType="qrcode" />;
           case 'barcode':
-            return <FileProcessor title="Naming by Barcode" processType="barcode" />;
+            return <FileProcessor title="Đặt tên theo Barcode" processType="barcode" />;
           case 'pdf':
             return <TwoLayerPdf />;
           default:

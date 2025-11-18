@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { FolderOpen, Play, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 interface LogEntry {
@@ -26,36 +26,50 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
   const [isProcessing, setIsProcessing] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const handleSelectFolder = () => {
-    const mockFolder = `/documents/${processType}_files`;
-    setSelectedFolder(mockFolder);
+    inputRef.current?.click();
+  };
 
-    const mockFiles: FileNode[] = [
-      {
-        name: 'batch_001',
-        type: 'folder',
-        children: [
-          { name: 'document_001.pdf', type: 'file' },
-          { name: 'document_002.pdf', type: 'file' },
-          { name: 'document_003.pdf', type: 'file' },
-        ],
-      },
-      {
-        name: 'batch_002',
-        type: 'folder',
-        children: [
-          { name: 'file_a.pdf', type: 'file' },
-          { name: 'file_b.pdf', type: 'file' },
-        ],
-      },
-      { name: 'single_document.pdf', type: 'file' },
-    ];
+  const handleFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    console.log("handleFilesChange: ", files);
+    if (!files) return;
 
-    setFileTree(mockFiles);
+    // Lấy tên file và tạo tree
+    const tree: FileNode[] = [];
+    const folderMap: Record<string, FileNode> = {};
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const pathParts = file.webkitRelativePath.split('/'); // browser chỉ hỗ trợ webkitRelativePath
+      let currentLevel = tree;
+
+      for (let j = 0; j < pathParts.length; j++) {
+        const part = pathParts[j];
+        const isFile = j === pathParts.length - 1;
+
+        if (isFile) {
+          currentLevel.push({ name: part, type: 'file' });
+        } else {
+          if (!folderMap[pathParts.slice(0, j + 1).join('/')]) {
+            const newFolder: FileNode = { name: part, type: 'folder', children: [] };
+            folderMap[pathParts.slice(0, j + 1).join('/')] = newFolder;
+            currentLevel.push(newFolder);
+          }
+          currentLevel = folderMap[pathParts.slice(0, j + 1).join('/')].children!;
+        }
+      }
+    }
+
+    setSelectedFolder(files[0] ? files[0].webkitRelativePath.split('/')[0] : '');
+    setFileTree(tree);
     setLogs([]);
   };
 
   const handleStartProcessing = async () => {
+    console.log("Starting processing...", selectedFolder);
     setIsProcessing(true);
     setLogs([]);
 
@@ -136,14 +150,22 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
 
   return (
     <div className="p-8">
+      <input
+        type="file"
+        ref={inputRef}
+        style={{ display: 'none' }}
+        webkitdirectory="true"
+        directory="true"
+        onChange={handleFilesChange}
+      />
+
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-800 mb-2">{title}</h2>
-        <p className="text-gray-600">Process files and rename based on {processType}</p>
+        <p className="text-gray-600">Phát hiện và đọc thông tin từ {processType}, sau đó đổi tên file</p>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">File Selection</h3>
 
           <button
             onClick={handleSelectFolder}
@@ -151,18 +173,18 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed mb-6"
           >
             <FolderOpen className="w-5 h-5" />
-            Select Folder
+            Chọn folder
           </button>
 
           {selectedFolder && (
             <>
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Selected folder:</p>
+                <p className="text-sm text-gray-600 mb-1">Thư mục đã chọn:</p>
                 <p className="text-sm font-medium text-gray-800">{selectedFolder}</p>
               </div>
 
               <div className="mb-6 p-4 bg-gray-50 rounded-lg max-h-64 overflow-y-auto">
-                <p className="text-sm font-medium text-gray-700 mb-3">Directory Tree:</p>
+                <p className="text-sm font-medium text-gray-700 mb-3">Cây thư mục:</p>
                 {renderFileTree(fileTree)}
               </div>
 

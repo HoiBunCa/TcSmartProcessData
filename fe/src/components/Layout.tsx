@@ -15,7 +15,7 @@ const menuItems = [
 ];
 
 export default function Layout({ children }: LayoutProps) {
-  const [currentPage, setCurrentPage] = useState<Page>('statistics');
+  const [currentPage, setCurrentPage] = useState<Page>('barcode');
 
   return (
     <div className="flex h-screen bg-gray-50">
