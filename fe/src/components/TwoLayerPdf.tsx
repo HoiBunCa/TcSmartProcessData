@@ -1,4 +1,4 @@
-import {useState, useRef} from 'react';
+import {useState, useRef, useEffect} from 'react';
 import {FolderOpen, Play, Download, CheckCircle, XCircle, Loader2, ArrowRight} from 'lucide-react';
 
 interface LogEntry {
@@ -24,9 +24,37 @@ export default function TwoLayerPdf() {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [step2Logs, setStep2Logs] = useState<LogEntry[]>([]);
     const [isDownloading, setIsDownloading] = useState(false);
-    const [folderId, setFolderId] = useState<string>('');
+    const [folderId, setFolderId] = useState<string | null>(null);
+    const [totalFiles, setTotalFiles] = useState<number | null>(null);
 
     const inputRef = useRef<HTMLInputElement>(null); // Ref for the hidden file input
+
+    const intervalRef = useRef<any>(null);
+    useEffect(() => {
+        let isRunning = false;
+        if (folderId === null || totalFiles === null) { return; }
+        intervalRef.current = setInterval(async () => {
+            if (isRunning) return;
+            isRunning = true;
+
+            try {
+                const res = await fetch(`http://0.0.0.0:8000/app/aidoc/check_ocr_done/?folder_id=${folderId}&total_files=${totalFiles}`);
+                const data = await res.json();
+                console.log(data);
+                if (data.status === "ok" && data.data === "ocr done") {
+                    clearInterval(intervalRef.current);
+                    console.log("Stopped polling because OCR is done!");
+                    setCurrentStep(2);
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                isRunning = false;
+            }
+        }, 5000);
+
+        return () => clearInterval(intervalRef.current);
+    }, [folderId, totalFiles]);
 
     const handleSelectFolder = () => {
         inputRef.current?.click(); // Trigger the hidden file input click
@@ -43,6 +71,7 @@ export default function TwoLayerPdf() {
         // Determine the base folder name from the first file's webkitRelativePath
         const baseFolderName = files[0].webkitRelativePath.split('/')[0];
         setSelectedFolder(baseFolderName);
+        setTotalFiles(files.length);
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -81,7 +110,6 @@ export default function TwoLayerPdf() {
             headers: {'Content-Type': 'application/json'},
         });
         const data = await response.json();
-        setFolderId(data.folder_id);
         return data.folder_id;
     }
 
@@ -92,6 +120,7 @@ export default function TwoLayerPdf() {
         setLogs([]);
 
         const folderIdLocal = await handleCreateFolderAiDoc();
+        setFolderId(folderIdLocal);
 
         for (let i = 0; i < allFiles.length; i++) {
             const file = allFiles[i];
@@ -119,7 +148,6 @@ export default function TwoLayerPdf() {
                     }),
                 });
                 const data = await response.json();
-                console.log(data);
                 if (response.ok) {
                     setLogs((prev) =>
                         prev.map((log) =>
@@ -127,7 +155,7 @@ export default function TwoLayerPdf() {
                                 ? {
                                     ...log,
                                     status: 'success',
-                                    message: `Đổi tên thành công: ${data.data}`,
+                                    message: `Tải lên xử lý thành công`,
                                 }
                                 : log
                         )
@@ -161,7 +189,7 @@ export default function TwoLayerPdf() {
         }
 
         setIsProcessing(false);
-        setCurrentStep(2);
+
     };
 
     const handleDownload = async () => {
@@ -169,6 +197,8 @@ export default function TwoLayerPdf() {
         setStep2Logs([]);
 
         const processedFiles = logs.filter((log) => log.status === 'success');
+
+        await fetch(`http://0.0.0.0:8000/app/aidoc/download_pdf2layer/?folder_id=${folderId}`, { method: 'GET' });
 
         for (let i = 0; i < processedFiles.length; i++) {
             const file = processedFiles[i];
@@ -302,14 +332,7 @@ export default function TwoLayerPdf() {
                     </div>
                     <span className="font-medium text-gray-700">Generate & Download</span>
                 </div>
-                {(currentStep === 2 || selectedFolder) && ( // Show reset if folder is selected or step 2 is active
-                    <button
-                        onClick={resetProcess}
-                        className="ml-auto px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                        Reset
-                    </button>
-                )}
+
             </div>
 
             {currentStep === 1 && (

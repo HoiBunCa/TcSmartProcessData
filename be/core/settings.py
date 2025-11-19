@@ -136,6 +136,5 @@ DATA_SRC_PATH = config("DATA_SRC_PATH", "")
 PATTERNS = [r"^[A-Z0-9]+-\d{4}-\d{6}$", r"^[\wÀ-Ỷà-ỷĐđ]{1,10}-\d{4}-[\wÀ-Ỷà-ỷĐđ]{1,10}$"]
 
 TOKEN_AIDOC = "Bearer " + config("TOKEN_AIDOC", "")
-URL_UPLOAD_AIDOC = config("URL_UPLOAD_AIDOC", "")
-URL_CREATE_FOLDER_AIDOC = config("URL_CREATE_FOLDER_AIDOC", "")
 PARENT_FOLDER_AIDOC = config("PARENT_FOLDER_AIDOC", 1, cast=int)
+DOMAIN_AIDOC = config("DOMAIN_AIDOC", "")

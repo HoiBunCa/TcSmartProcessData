@@ -15,6 +15,7 @@ import re
 import json
 import time
 import requests
+import threading
 
 qreader = QReader(model_size='l')
 
@@ -164,12 +165,16 @@ class BarCode(viewsets.ViewSet):
 
 
 class AiDoc(viewsets.ViewSet):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.data_ocr = []
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def create_folder_aidoc(self, request, *args, **kwargs):
-        url = settings.URL_CREATE_FOLDER_AIDOC
+        url = f'{settings.DOMAIN_AIDOC}/home/api/v1/folder'
         payload = json.dumps(
-            {"parent_id": settings.PARENT_FOLDER_AIDOC, "folder_name": f"Dữ liệu OCR 2 lớp - {time.time()}", "form_id": []})
+            {"parent_id": settings.PARENT_FOLDER_AIDOC, "folder_name": f"Dữ liệu OCR 2 lớp - {time.time()}",
+             "form_id": []})
         logger.info(payload)
         headers = {"Authorization": settings.TOKEN_AIDOC, "content-type": "application/json"}
         response = requests.post(url, headers=headers, data=payload)
@@ -186,7 +191,7 @@ class AiDoc(viewsets.ViewSet):
         if len(glob_files):
             file_path = glob_files[0]
             logger.info(f"========= file_path: {file_path}")
-            url = settings.URL_UPLOAD_AIDOC
+            url = f'{settings.DOMAIN_AIDOC}/home/api/v1/upload-file'
             filename = os.path.basename(file_path)
             payload = {"folder": folder_id, "get_value": 1}
             files = [("file", (filename, open(file_path, "rb"), "application/pdf"))]
@@ -195,3 +200,67 @@ class AiDoc(viewsets.ViewSet):
             return Response({"status": response.status_code}, status=response.status_code)
 
         return Response({"status": "error"}, status=500)
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def check_ocr_done(self, request, *args, **kwargs):
+
+        folder_id = self.request.query_params.get('folder_id')
+        total_files = int(self.request.query_params.get('total_files'))
+
+        url = f"{settings.DOMAIN_AIDOC}/home/api/v1/response-api/count_data_ocr_done/?folder_id={folder_id}"
+        headers = {"Authorization": settings.TOKEN_AIDOC}
+        response = requests.get(url, headers=headers)
+        processed = response.json()["data"]['count']
+        logger.info(f"========= processed: {processed} / {total_files}")
+        if processed < total_files:
+            return Response({"status": "ok", "data": "processing"}, status=200)
+        else:
+            return Response({"status": "ok", "data": "ocr done"}, status=200)
+
+    def get_data_ocr_done(self, folder_id):
+        data_ocr = []
+        limit = 100
+        offset = 0
+        while True:
+            url = f"{settings.DOMAIN_AIDOC}/home/api/v1/response-api/get_data_ocr_done/" \
+                  f"?folder_id={folder_id}&limit={limit}&offset={offset}"
+            headers = {"Authorization": settings.TOKEN_AIDOC}
+            response = requests.get(url, headers=headers)
+            data = response.json()["data"]
+            logger.info(f"------------- get_data_ocr_done - data: {self.data_ocr}")
+            if not data:
+                break
+            data_ocr.extend(data)
+            offset += limit
+        return data_ocr
+
+    @staticmethod
+    def _download_worker(data_ocr):
+        logger.info(f"----------- _download_worker: {data_ocr}")
+        for data in data_ocr:
+            request_id = data["request_id"]
+            logger.info(f"----------- Downloading request_id: {request_id}")
+            filename = data["title"]
+            url = f"{settings.DOMAIN_AIDOC}/home/api/v1/ocr-general-demo/download-response/type"
+            payload = {"request_id": request_id, "type_export": "pdf"}
+            headers = {"accept": "application/json", "Authorization": settings.TOKEN_AIDOC}
+            response = requests.post(url, headers=headers, data=payload)
+            if response.status_code == 200:
+                os.makedirs("media/PDF_2_LAYER", exist_ok=True)
+                with open(f"media/PDF_2_LAYER/{filename}", "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def download_pdf2layer(self, request, *args, **kwargs):
+        folder_id = self.request.query_params.get('folder_id')
+
+        data_ocr = self.get_data_ocr_done(folder_id)  # trả về data, không dùng self.data_ocr
+
+        threading.Thread(
+            target=self._download_worker,
+            args=(data_ocr,),
+            daemon=True
+        ).start()
+
+        return Response({"status": "ok"}, status=200)
