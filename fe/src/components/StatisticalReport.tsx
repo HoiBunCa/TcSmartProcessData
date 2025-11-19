@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { FileText, CheckCircle, XCircle } from 'lucide-react';
 
 const mockData = [
   { date: '2025-01-15', processed: 45, success: 42, failed: 3 },

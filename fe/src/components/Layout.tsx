@@ -15,7 +15,7 @@ const menuItems = [
 ];
 
 export default function Layout({ children }: LayoutProps) {
-  const [currentPage, setCurrentPage] = useState<Page>('qrcode');
+  const [currentPage, setCurrentPage] = useState<Page>('pdf');
 
   return (
     <div className="flex h-screen bg-gray-50">

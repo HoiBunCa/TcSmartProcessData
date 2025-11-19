@@ -1,7 +1,7 @@
 import Layout from './components/Layout';
-import StatisticalReport from './pages/StatisticalReport';
+import StatisticalReport from './components/StatisticalReport.tsx';
 import FileProcessor from './components/FileProcessor';
-import TwoLayerPdf from './pages/TwoLayerPdf';
+import TwoLayerPdf from './components/TwoLayerPdf.tsx';
 
 function App() {
   return (
