@@ -12,6 +12,9 @@ import glob
 import cv2
 import os
 import re
+import json
+import time
+import requests
 
 qreader = QReader(model_size='l')
 
@@ -156,5 +159,39 @@ class BarCode(viewsets.ViewSet):
             data = self.convert_pdfs(glob_files[0])
 
             return Response({"data": data}, status=200)
+
+        return Response({"status": "error"}, status=500)
+
+
+class AiDoc(viewsets.ViewSet):
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def create_folder_aidoc(self, request, *args, **kwargs):
+        url = settings.URL_CREATE_FOLDER_AIDOC
+        payload = json.dumps(
+            {"parent_id": settings.PARENT_FOLDER_AIDOC, "folder_name": f"Dữ liệu OCR 2 lớp - {time.time()}", "form_id": []})
+        logger.info(payload)
+        headers = {"Authorization": settings.TOKEN_AIDOC, "content-type": "application/json"}
+        response = requests.post(url, headers=headers, data=payload)
+        folder_id = response.json()["id"]
+        return Response({"status": "ok", "folder_id": folder_id}, status=200)
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def upload_aidoc(self, request, *args, **kwargs):
+        folder_id = self.request.data.get('folder_id')
+        file_pdf_name = self.request.data.get('file_pdf')
+
+        src_path = settings.DATA_SRC_PATH
+        glob_files = glob.glob(f'{src_path}/**/{file_pdf_name}', recursive=True)
+        if len(glob_files):
+            file_path = glob_files[0]
+            logger.info(f"========= file_path: {file_path}")
+            url = settings.URL_UPLOAD_AIDOC
+            filename = os.path.basename(file_path)
+            payload = {"folder": folder_id, "get_value": 1}
+            files = [("file", (filename, open(file_path, "rb"), "application/pdf"))]
+            headers = {"Authorization": settings.TOKEN_AIDOC}
+            response = requests.post(url, headers=headers, data=payload, files=files)
+            return Response({"status": response.status_code}, status=response.status_code)
 
         return Response({"status": "error"}, status=500)

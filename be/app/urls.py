@@ -6,6 +6,6 @@ urlpatterns = []
 router = DefaultRouter()
 router.register(r'qrcode', views.QrCode, basename='qrcode')
 router.register(r'barcode', views.BarCode, basename='barcode')
-# router.register(r'pdf2layer', views.Pdf2Layer, basename='pdf2layer')
+router.register(r'aidoc', views.AiDoc, basename='aidoc')
 
 urlpatterns += router.urls
