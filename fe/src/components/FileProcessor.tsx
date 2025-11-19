@@ -94,7 +94,7 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
 
       try {
         // Gọi API POST
-        const response = await fetch(`http://0.0.0.0:8000/api/${processType}/process/start/`, {
+        const response = await fetch(`http://0.0.0.0:8000/app/${processType}/start/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ file_pdf: file }),
