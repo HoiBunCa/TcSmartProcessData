@@ -134,4 +134,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DATA_SRC_PATH = config("DATA_SRC_PATH", "")
 
 PATTERNS = [r"^[A-Z0-9]+-\d{4}-\d{6}$", r"^[\wÀ-Ỷà-ỷĐđ]{1,10}-\d{4}-[\wÀ-Ỷà-ỷĐđ]{1,10}$"]
-TOKEN_AIDOC = config("TOKEN_AIDOC", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjo0OTExNjk5NzUyLCJpYXQiOjE3NTgwOTk3NTIsImp0aSI6ImYyN2YyMzk2ZmNjNDQ5NjY4NTg1YzFmOWU5YTA3NjEyIiwidXNlcl9pZCI6MSwicm9sZSI6IkFkbWluIGhcdTFlYzcgdGhcdTFlZDFuZyJ9.SzymITgplfPJj_dinseBr0Ig80do6EHGdlSZDLHnHYk")
+TOKEN_AIDOC = "Bearer " + config("TOKEN_AIDOC", "")
