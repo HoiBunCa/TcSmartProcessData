@@ -63,8 +63,8 @@ class Process(viewsets.ViewSet):
 
         glob_files = glob.glob(f'{src_path}/**/{file_pdf}', recursive=True)
         if len(glob_files):
-            barcode_data = self.convert_pdfs(glob_files[0])
+            data = self.convert_pdfs(glob_files[0])
 
-            return Response({"barcode_data": barcode_data}, status=200)
+            return Response({"data": data}, status=200)
 
         return Response({"status": "error"}, status=500)

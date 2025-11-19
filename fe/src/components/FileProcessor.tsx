@@ -108,7 +108,7 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
                 ? {
                     ...log,
                     status: 'success',
-                    message: `Đổi tên thành công: ${data.barcode_data}`,
+                    message: `Đổi tên thành công: ${data.data}`,
                   }
                 : log
             )
