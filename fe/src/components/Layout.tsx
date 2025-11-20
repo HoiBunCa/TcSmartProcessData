@@ -15,7 +15,7 @@ const menuItems = [
 ];
 
 export default function Layout({ children }: LayoutProps) {
-  const [currentPage, setCurrentPage] = useState<Page>('pdf');
+  const [currentPage, setCurrentPage] = useState<Page>('statistics');
 
   return (
     <div className="flex h-screen bg-gray-50">

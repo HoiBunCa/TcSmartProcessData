@@ -59,7 +59,7 @@ class QrCode(viewsets.ViewSet):
                     return page_number, qr_value
 
         except Exception as e:
-
+            logger.info(f"Exception during QR code detection: {str(e)}")
             return None, None
 
     @staticmethod
@@ -76,15 +76,18 @@ class QrCode(viewsets.ViewSet):
             basedir = os.path.dirname(pdf_file)
             page_number, qrcode_val = self.process_page(pdf_file, 1)
             if not qrcode_val:
+                logger.info(f'------------ Không phát hiện qr code trong file {pdf_file}')
                 return pdf_file, None, "Không phát hiện qr code"
 
             new_file = f'{basedir}/{qrcode_val}.pdf'
 
             new_file = self.get_unique_filename(new_file)
+            logger.info(f'------------ QrCode renaming file {pdf_file} to: {new_file}')
             os.rename(pdf_file, new_file)
             return pdf_file, qrcode_val, None
 
         except Exception as e:
+            logger.info(f"Exception during QR code processing: {str(e)}")
             return pdf_file, None, f"Exception: {str(e)}"
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
@@ -187,6 +190,8 @@ class AiDoc(viewsets.ViewSet):
         file_pdf_name = self.request.data.get('file_pdf')
 
         src_path = settings.DATA_SRC_PATH
+        logger.info(f"========= src_path: {src_path}")
+        logger.info(f"========= file_pdf_name: {file_pdf_name}")
         glob_files = glob.glob(f'{src_path}/**/{file_pdf_name}', recursive=True)
         if len(glob_files):
             file_path = glob_files[0]
