@@ -198,7 +198,7 @@ export default function TwoLayerPdf() {
 
         const processedFiles = logs.filter((log) => log.status === 'success');
 
-        await fetch(`http://0.0.0.0:8000/app/aidoc/download_pdf2layer/?folder_id=${folderId}`, { method: 'GET' });
+        // await fetch(`http://0.0.0.0:8000/app/aidoc/download_pdf2layer/?folder_id=${folderId}`, { method: 'GET' });
 
         for (let i = 0; i < processedFiles.length; i++) {
             const file = processedFiles[i];
@@ -215,25 +215,52 @@ export default function TwoLayerPdf() {
                 },
             ]);
 
-            // Simulate API call
-            await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 800));
-
-            const success = Math.random() > 0.1; // Simulate some failures
-
-            setStep2Logs((prev) =>
-                prev.map((log) =>
-                    log.id === logId
+            try {
+                // Gọi API POST
+                const response = await fetch(`http://0.0.0.0:8000/app/aidoc/download_file/?folder_id=${folderId}`, {
+                  method: 'GET',
+                });
+                const data = await response.json();
+                console.log(data);
+                if (response.ok) {
+                  setStep2Logs((prev) =>
+                    prev.map((log) =>
+                      log.id === logId
                         ? {
                             ...log,
-                            status: success ? 'success' : 'error',
-                            message: success
-                                ? `Successfully generated ${file.filename} - ready for download`
-                                : `Failed to generate ${file.filename} - compression error`,
-                        }
+                            status: 'success',
+                            message: `Tải về thành công: ${data.data}`,
+                          }
                         : log
-                )
-            );
-        }
+                    )
+                  );
+                } else {
+                  setStep2Logs((prev) =>
+                    prev.map((log) =>
+                      log.id === logId
+                        ? {
+                            ...log,
+                            status: 'error',
+                            message: `Failed to process ${file}: ${data.data || 'Unknown error'}`,
+                          }
+                        : log
+                    )
+                  );
+                }
+              } catch (error: any) {
+                setStep2Logs((prev) =>
+                  prev.map((log) =>
+                    log.id === logId
+                      ? {
+                          ...log,
+                          status: 'error',
+                          message: `Failed to process ${file}: ${error.message}`,
+                        }
+                      : log
+                  )
+                );
+              }
+            }
 
         setIsDownloading(false);
     };
@@ -274,15 +301,6 @@ export default function TwoLayerPdf() {
                 {node.children && renderFileTree(node.children, level + 1)}
             </div>
         ));
-    };
-
-    const resetProcess = () => {
-        setCurrentStep(1);
-        setSelectedFolder('');
-        setFileTree([]);
-        setAllFiles([]); // Clear all files on reset
-        setLogs([]);
-        setStep2Logs([]);
     };
 
     const processedCountStep1 = logs.filter((log) => log.status === 'success' || log.status === 'error').length;

@@ -7,6 +7,8 @@ from qreader import QReader
 from pdf2image import convert_from_path
 from django.conf import settings
 from pyzbar.pyzbar import decode
+from django.core.cache import cache
+
 import numpy as np
 import glob
 import cv2
@@ -15,7 +17,6 @@ import re
 import json
 import time
 import requests
-import threading
 
 qreader = QReader(model_size='l')
 
@@ -167,7 +168,6 @@ class BarCode(viewsets.ViewSet):
 class AiDoc(viewsets.ViewSet):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.data_ocr = []
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def create_folder_aidoc(self, request, *args, **kwargs):
@@ -215,6 +215,7 @@ class AiDoc(viewsets.ViewSet):
         if processed < total_files:
             return Response({"status": "ok", "data": "processing"}, status=200)
         else:
+            self.get_data_ocr_done(folder_id)
             return Response({"status": "ok", "data": "ocr done"}, status=200)
 
     def get_data_ocr_done(self, folder_id):
@@ -227,19 +228,29 @@ class AiDoc(viewsets.ViewSet):
             headers = {"Authorization": settings.TOKEN_AIDOC}
             response = requests.get(url, headers=headers)
             data = response.json()["data"]
-            logger.info(f"------------- get_data_ocr_done - data: {self.data_ocr}")
             if not data:
                 break
             data_ocr.extend(data)
             offset += limit
-        return data_ocr
 
-    @staticmethod
-    def _download_worker(data_ocr):
-        logger.info(f"----------- _download_worker: {data_ocr}")
-        for data in data_ocr:
+        cache.set(f"ocr_data_{folder_id}", data_ocr, timeout=3600)
+        data_ocr = cache.get(f"ocr_data_{folder_id}", [])
+        logger.info(f"------------- get_data_ocr_done - data: {data_ocr}")
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def download_file(self, request, *args, **kwargs):
+
+        folder_id = self.request.query_params.get('folder_id')
+        logger.info(f"------------- download_file - folder_id: {folder_id}")
+        data_ocr = cache.get(f"ocr_data_{folder_id}", [])
+        logger.info(f"------------- download_file - data: {data_ocr}")
+
+        if not data_ocr:
+            return Response({"error": "no data"}, status=500)
+        else:
+            data = data_ocr.pop(0)
             request_id = data["request_id"]
-            logger.info(f"----------- Downloading request_id: {request_id}")
+            logger.info(f"----------- Downloading data: {data}")
             filename = data["title"]
             url = f"{settings.DOMAIN_AIDOC}/home/api/v1/ocr-general-demo/download-response/type"
             payload = {"request_id": request_id, "type_export": "pdf"}
@@ -251,16 +262,6 @@ class AiDoc(viewsets.ViewSet):
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
 
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
-    def download_pdf2layer(self, request, *args, **kwargs):
-        folder_id = self.request.query_params.get('folder_id')
+            cache.set(f"ocr_data_{folder_id}", data_ocr, timeout=3600)
 
-        data_ocr = self.get_data_ocr_done(folder_id)  # trả về data, không dùng self.data_ocr
-
-        threading.Thread(
-            target=self._download_worker,
-            args=(data_ocr,),
-            daemon=True
-        ).start()
-
-        return Response({"status": "ok"}, status=200)
+            return Response({"data": f"{filename}"}, status=200)
