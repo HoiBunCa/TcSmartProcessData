@@ -1,6 +1,6 @@
 import {useState, useRef, useEffect} from 'react';
 import {FolderOpen, Play, Download, CheckCircle, XCircle, Loader2, ArrowRight} from 'lucide-react';
-
+const API_URL = "http://localhost:18000";
 interface LogEntry {
     id: string;
     filename: string;
@@ -38,7 +38,7 @@ export default function TwoLayerPdf() {
             isRunning = true;
 
             try {
-                const res = await fetch(`http://0.0.0.0:8000/app/aidoc/check_ocr_done/?folder_id=${folderId}&total_files=${totalFiles}`);
+                const res = await fetch(`${API_URL}/app/aidoc/check_ocr_done/?folder_id=${folderId}&total_files=${totalFiles}`);
                 const data = await res.json();
                 console.log(data);
                 if (data.status === "ok" && data.data === "ocr done") {
@@ -105,7 +105,7 @@ export default function TwoLayerPdf() {
     };
 
     const handleCreateFolderAiDoc = async () => {
-        const response = await fetch(`http://0.0.0.0:8000/app/aidoc/create_folder_aidoc/`, {
+        const response = await fetch(`${API_URL}/app/aidoc/create_folder_aidoc/`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
         });
@@ -139,7 +139,7 @@ export default function TwoLayerPdf() {
 
             try {
                 // Gọi API POST
-                const response = await fetch(`http://0.0.0.0:8000/app/aidoc/upload_aidoc/`, {
+                const response = await fetch(`${API_URL}/app/aidoc/upload_aidoc/`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -198,8 +198,6 @@ export default function TwoLayerPdf() {
 
         const processedFiles = logs.filter((log) => log.status === 'success');
 
-        // await fetch(`http://0.0.0.0:8000/app/aidoc/download_pdf2layer/?folder_id=${folderId}`, { method: 'GET' });
-
         for (let i = 0; i < processedFiles.length; i++) {
             const file = processedFiles[i];
             const logId = `step2-${Date.now()}-${i}`;
@@ -217,7 +215,7 @@ export default function TwoLayerPdf() {
 
             try {
                 // Gọi API POST
-                const response = await fetch(`http://0.0.0.0:8000/app/aidoc/download_file/?folder_id=${folderId}`, {
+                const response = await fetch(`${API_URL}/app/aidoc/download_file/?folder_id=${folderId}`, {
                   method: 'GET',
                 });
                 const data = await response.json();

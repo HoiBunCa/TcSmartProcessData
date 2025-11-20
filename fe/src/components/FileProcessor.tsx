@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { FolderOpen, Play, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-
+const API_URL = "http://localhost:18000";
 interface LogEntry {
   id: string;
   filename: string;
@@ -94,7 +94,7 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
 
       try {
         // Gọi API POST
-        const response = await fetch(`http://0.0.0.0:8000/app/${processType}/start/`, {
+        const response = await fetch(`${API_URL}/app/${processType}/start/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ file_pdf: file }),
