@@ -187,6 +187,8 @@ class AiDoc(viewsets.ViewSet):
         file_pdf_name = self.request.data.get('file_pdf')
 
         src_path = settings.DATA_SRC_PATH
+        logger.info(f"========= src_path: {src_path}")
+        logger.info(f"========= file_pdf_name: {file_pdf_name}")
         glob_files = glob.glob(f'{src_path}/**/{file_pdf_name}', recursive=True)
         if len(glob_files):
             file_path = glob_files[0]

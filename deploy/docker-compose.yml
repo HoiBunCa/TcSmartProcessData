@@ -7,9 +7,9 @@ services:
     restart: always
     platform: linux/amd64
     volumes:
-      - "./media:/usr/src/app/media"
-      - "./:/usr/src/app"
-      - "./static:/usr/src/app/static"
+      - "./media:/app/media"
+      - "./static:/app/static"
+      - "./data:/app/data"
     env_file:
       - ../be/.env
     ports:
