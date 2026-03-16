@@ -1,6 +1,6 @@
 import {useState, useRef, useEffect} from 'react';
 import {FolderOpen, Play, Download, CheckCircle, XCircle, Loader2, ArrowRight} from 'lucide-react';
-const API_URL = "http://localhost:18000";
+const API_URL = "http://localhost:8000";
 interface LogEntry {
     id: string;
     filename: string;
@@ -312,7 +312,11 @@ export default function TwoLayerPdf() {
                 type="file"
                 ref={inputRef}
                 style={{display: 'none'}}
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore - webkitdirectory is supported by Chromium-based browsers
                 webkitdirectory="true"
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore - directory is a non-standard attribute
                 directory="true"
                 onChange={handleFilesChange}
             />

@@ -1,7 +1,7 @@
 import Layout from './components/Layout';
 import StatisticalReport from './components/StatisticalReport.tsx';
-import FileProcessor from './components/FileProcessor';
-import TwoLayerPdf from './components/TwoLayerPdf.tsx';
+import UnifiedFileWorkflow from './components/UnifiedFileWorkflow.tsx';
+import Settings from './components/Settings.tsx';
 
 function App() {
   return (
@@ -10,12 +10,10 @@ function App() {
         switch (page) {
           case 'statistics':
             return <StatisticalReport />;
-          case 'qrcode':
-            return <FileProcessor title="Đặt tên theo QR code" processType="qrcode" />;
-          case 'barcode':
-            return <FileProcessor title="Đặt tên theo Barcode" processType="barcode" />;
-          case 'pdf':
-            return <TwoLayerPdf />;
+          case 'workflow':
+            return <UnifiedFileWorkflow />;
+          case 'settings':
+            return <Settings />;
           default:
             return <StatisticalReport />;
         }

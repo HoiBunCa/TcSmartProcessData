@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { FolderOpen, Play, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-const API_URL = "http://localhost:18000";
+const API_URL = "http://localhost:8000";
 interface LogEntry {
   id: string;
   filename: string;
@@ -190,7 +190,11 @@ export default function FileProcessor({ title, processType }: FileProcessorProps
         type="file"
         ref={inputRef}
         style={{ display: 'none' }}
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - webkitdirectory is supported by Chromium-based browsers
         webkitdirectory="true"
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - directory is a non-standard attribute
         directory="true"
         onChange={handleFilesChange}
       />
