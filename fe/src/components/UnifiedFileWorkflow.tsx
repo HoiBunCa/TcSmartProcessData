@@ -388,15 +388,6 @@ export default function UnifiedFileWorkflow() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => selectedAction && handleProcess(selectedAction)}
-            disabled={!canProcess}
-            className="mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {status === 'processing' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
-            Chạy lại tác vụ đang chọn
-          </button>
         </div>
       </div>
 

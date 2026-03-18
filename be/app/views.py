@@ -144,22 +144,20 @@ class QrCode(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def start(self, request, *args, **kwargs):
-        src_path = settings.DATA_SRC_PATH
-        if src_path == '':
-            return Response({"status": "error"}, status=500)
 
-        file_pdf = self.request.data.get('file_pdf')
+        session_id = self.request.data.get('session_id')
+        files = File.objects.filter(session_id=session_id)
 
-        if file_pdf == '.DS_Store:':
-            return Response({"barcode_data": "bỏ qua file DS_Store"}, status=200)
+        if not len(files):
+            return Response({"data": None, 'message': 'Không tìm thấy file'}, status=500)
 
-        glob_files = glob.glob(f'{src_path}/**/{file_pdf}', recursive=True)
-        if len(glob_files):
-            pdf_file, data, _ = self.convert_pdfs(glob_files[0])
+        else:
+            for file in files:
+                path_file = os.path.join(settings.MEDIA_ROOT, file.file.name)
+                logger.info(f'------- xử lý file : {path_file}')
+                self.convert_pdfs(path_file)
 
-            return Response({"data": data}, status=200)
-
-        return Response({"status": "error"}, status=500)
+        return Response({"data": None, 'message': 'Thành công'}, status=200)
 
 
 class BarCode(viewsets.ViewSet):
@@ -198,26 +196,23 @@ class BarCode(viewsets.ViewSet):
                     raise e
             logger.info("Hoàn tất")
         except Exception as e:
-            logger.info("Lỗi: ", str(e))
+            logger.info(f"Lỗi: {str(e)}")
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def start(self, request, *args, **kwargs):
-        src_path = settings.DATA_SRC_PATH
-        if src_path == '':
-            return Response({"status": "error"}, status=500)
+        session_id = self.request.data.get('session_id')
+        files = File.objects.filter(session_id=session_id)
 
-        file_pdf = self.request.data.get('file_pdf')
+        if not len(files):
+            return Response({"data": None, 'message': 'Không tìm thấy file'}, status=500)
 
-        if file_pdf == '.DS_Store:':
-            return Response({"barcode_data": "bỏ qua file DS_Store"}, status=200)
+        else:
+            for file in files:
+                path_file = os.path.join(settings.MEDIA_ROOT, file.file.name)
+                logger.info(f'------- xử lý file : {path_file}')
+                self.convert_pdfs(path_file)
 
-        glob_files = glob.glob(f'{src_path}/**/{file_pdf}', recursive=True)
-        if len(glob_files):
-            data = self.convert_pdfs(glob_files[0])
-
-            return Response({"data": data}, status=200)
-
-        return Response({"status": "error"}, status=500)
+        return Response({"data": None, 'message': 'Thành công'}, status=200)
 
 
 class AiDoc(viewsets.ViewSet):

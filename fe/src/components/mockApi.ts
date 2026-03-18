@@ -95,17 +95,7 @@ function makeOutputName(action: ProcessAction, input: string) {
   }
 }
 
-/**
- * Mock API: Upload
- * - returns a sessionId + file metadata
- */
-export async function mockUpload(files: File[], settings: AppSettings): Promise<UploadResult> {
-  await sleep(Math.min(Math.max(settings.TIME_SLEEP, 200), 2000));
-  return {
-    sessionId: uid('sess'),
-    files: files.map((f) => ({ name: f.name, size: f.size })),
-  };
-}
+
 
 /**
  * Real API: Upload (multipart/form-data)
