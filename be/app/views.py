@@ -2,6 +2,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework import viewsets
+from rest_framework.parsers import MultiPartParser, FormParser
 from loguru import logger
 from qreader import QReader
 from pdf2image import convert_from_path
@@ -18,10 +19,61 @@ import json
 import time
 import requests
 
+from .models import File
+
 qreader = QReader(model_size='l')
 
 
 # Create your views here.
+
+
+class FileUpload(viewsets.ViewSet):
+    """Simple upload endpoint used by the FE to replace mockUpload.
+
+    POST /app/files/upload/
+    - multipart/form-data
+    - accepts either:
+        - files: multiple files
+        - file: single file
+    - optional: session_id
+    """
+
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
+
+    @action(detail=False, methods=["post"], url_path="upload")
+    def upload(self, request, *args, **kwargs):
+        session_id = request.data.get("session_id")
+        if not session_id:
+            # keep it short for FE display; collisions are unlikely for demo purposes
+            session_id = f"sess_{int(time.time() * 1000)}"
+
+        uploaded = []
+
+        # Prefer 'files' (multiple). Fallback to 'file' (single).
+        files = request.FILES.getlist("files")
+        if not files and "file" in request.FILES:
+            files = [request.FILES["file"]]
+
+        if not files:
+            return Response({"detail": "No file provided (use field 'files' or 'file')"}, status=400)
+
+        for f in files:
+            obj = File.objects.create(
+                session_id=session_id,
+                file=f,
+                original_name=getattr(f, "name", ""),
+                size=getattr(f, "size", 0) or 0,
+                content_type=getattr(f, "content_type", "") or "",
+            )
+            uploaded.append({
+                "id": obj.id,
+                "name": obj.original_name,
+                "size": obj.size,
+                "url": request.build_absolute_uri(obj.file.url) if obj.file else None,
+            })
+
+        return Response({"sessionId": session_id, "files": uploaded}, status=200)
 
 class QrCode(viewsets.ViewSet):
 

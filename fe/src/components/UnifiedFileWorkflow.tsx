@@ -15,7 +15,7 @@ import {
   loadSettings,
   mockDownload,
   mockProcess,
-  mockUpload,
+  apiUpload,
   ProcessAction,
   ProcessResultItem,
   LogEntry,
@@ -128,7 +128,7 @@ export default function UnifiedFileWorkflow() {
     try {
       setStatus('uploading');
       appendLog({ status: 'processing', title: 'UPLOAD', detail: `Uploading ${pickedFiles.length} file(s)...` });
-      const res = await mockUpload(pickedFiles, settings);
+      const res = await apiUpload(pickedFiles, settings);
       setSessionId(res.sessionId);
       setUploadedFiles(res.files);
       setStatus('uploaded');
@@ -320,7 +320,7 @@ export default function UnifiedFileWorkflow() {
                   Đã chọn: <span className="font-semibold">{pickedFiles.length}</span> file(s) — Tổng dung lượng:{' '}
                   <span className="font-semibold">{humanSize(totalSize)}</span>
                 </p>
-                <p className="text-xs text-gray-500 mt-1">(Mock upload sẽ chỉ lấy metadata file)</p>
+                <p className="text-xs text-gray-500 mt-1">Upload thật: sẽ gửi file lên backend và lưu vào media/</p>
               </div>
             )}
           </div>

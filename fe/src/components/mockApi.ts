@@ -108,6 +108,43 @@ export async function mockUpload(files: File[], settings: AppSettings): Promise<
 }
 
 /**
+ * Real API: Upload (multipart/form-data)
+ * Backend endpoint: POST {API_BASE_URL}/app/files/upload/
+ * - field: files (multiple)
+ */
+export async function apiUpload(files: File[], settings: AppSettings): Promise<UploadResult> {
+  const url = `${settings.API_BASE_URL.replace(/\/$/, '')}/app/files/upload/`;
+
+  const form = new FormData();
+  for (const f of files) form.append('files', f);
+
+  const headers: Record<string, string> = {};
+  // If later you enable auth, keep the same settings contract.
+  if (settings.API_TOKEN) headers.Authorization = `Bearer ${settings.API_TOKEN}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: form,
+  });
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`Upload failed (${res.status}): ${txt || res.statusText}`);
+  }
+
+  const data = (await res.json()) as {
+    sessionId: string;
+    files: Array<{ name: string; size: number; id?: number; url?: string }>;
+  };
+
+  return {
+    sessionId: data.sessionId,
+    files: (data.files ?? []).map((f) => ({ name: f.name, size: f.size })),
+  };
+}
+
+/**
  * Mock API: Process all uploaded files for an action
  * - simulates per-file results
  */
