@@ -95,6 +95,50 @@ function makeOutputName(action: ProcessAction, input: string) {
   }
 }
 
+function withBaseUrl(baseUrl: string, path: string) {
+  const base = baseUrl.replace(/\/$/, '');
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}`;
+}
+
+async function apiStartDetect(
+  action: Extract<ProcessAction, 'qrcode' | 'barcode'>,
+  sessionId: string,
+  settings: AppSettings
+): Promise<{ data: unknown; message: string }> {
+  const endpoint = action === 'qrcode' ? '/app/qrcode/start/' : '/app/barcode/start/';
+  const url = withBaseUrl(settings.API_BASE_URL, endpoint);
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (settings.API_TOKEN) headers.Authorization = `Bearer ${settings.API_TOKEN}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+
+  const text = await res.text().catch(() => '');
+  let json: any = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    // ignore JSON parse error; handled below
+  }
+
+  if (!res.ok) {
+    const msg = json?.message || json?.detail || text || res.statusText;
+    throw new Error(`${action} start failed (${res.status}): ${msg}`);
+  }
+
+  return {
+    data: json?.data ?? null,
+    message: json?.message ?? 'Thành công',
+  };
+}
+
 
 
 /**
@@ -144,14 +188,28 @@ export async function mockProcess(
   files: Array<{ name: string; size: number }>,
   settings: AppSettings
 ): Promise<ProcessResult> {
-  // simulate overall API call latency
+  // For QR/Barcode: call real API start endpoint.
+  // Note: backend renames files on disk; it currently doesn't return per-file output.
+  // To keep FE flow intact, we map the response to a synthetic per-file result list.
+  if (action === 'qrcode' || action === 'barcode') {
+    const startRes = await apiStartDetect(action, sessionId, settings);
+    const results: ProcessResultItem[] = files.map((f) => ({
+      inputName: f.name,
+      // best-effort placeholder (backend doesn't provide output filenames yet)
+      outputName: makeOutputName(action, f.name),
+      ok: true,
+      message: startRes.message || 'Thành công',
+    }));
+    return { sessionId, action, results };
+  }
+
+  // pdf2layer: keep mock behavior for now
   await sleep(Math.min(Math.max(settings.TIME_SLEEP, 200), 2000));
 
   const results: ProcessResultItem[] = [];
   for (const f of files) {
-    // simulate per-file processing time a bit
     await sleep(50);
-    const ok = randOk(action === 'pdf2layer' ? 0.85 : 0.9);
+    const ok = randOk(0.85);
     results.push({
       inputName: f.name,
       outputName: ok ? makeOutputName(action, f.name) : f.name,

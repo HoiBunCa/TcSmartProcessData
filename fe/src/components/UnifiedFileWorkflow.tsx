@@ -197,13 +197,13 @@ export default function UnifiedFileWorkflow() {
       {
         id: 'qrcode' as const,
         label: 'QR detect',
-        desc: 'Đổi tên file theo QR code (mock)',
+        desc: 'Đổi tên file theo QR code',
         icon: QrCode,
       },
       {
         id: 'barcode' as const,
         label: 'Barcode detect',
-        desc: 'Đổi tên file theo Barcode (mock)',
+        desc: 'Đổi tên file theo Barcode',
         icon: Barcode,
       },
       {

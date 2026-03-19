@@ -145,3 +145,5 @@ PATTERNS = [r"^[A-Z0-9]+-\d{4}-\d{6}$", r"^[\wÀ-Ỷà-ỷĐđ]{1,10}-\d{4}-[\w�
 TOKEN_AIDOC = "Bearer " + config("TOKEN_AIDOC", "")
 PARENT_FOLDER_AIDOC = config("PARENT_FOLDER_AIDOC", 1, cast=int)
 DOMAIN_AIDOC = config("DOMAIN_AIDOC", "")
+
+DATA_UPLOAD_MAX_NUMBER_FILES=1000

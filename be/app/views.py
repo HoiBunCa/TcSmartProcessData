@@ -10,6 +10,7 @@ from django.conf import settings
 from pyzbar.pyzbar import decode
 from django.core.cache import cache
 
+import shutil
 import numpy as np
 import glob
 import cv2
@@ -126,17 +127,21 @@ class QrCode(viewsets.ViewSet):
     def convert_pdfs(self, pdf_file):
         try:
             basedir = os.path.dirname(pdf_file)
+            new_basedir = basedir.replace('uploads', 'qrcode')
+            os.makedirs(new_basedir, exist_ok=True)
+
             page_number, qrcode_val = self.process_page(pdf_file, 1)
-            if not qrcode_val:
+
+            if qrcode_val:
+                new_file = f'{new_basedir}/{qrcode_val}.pdf'
+                new_file = self.get_unique_filename(new_file) # cần có hàm này để xử lý case 2 qr code có giá trị giống nhau
+                logger.info(f'------------ QrCode renaming file {pdf_file} to: {new_file}')
+                shutil.copyfile(pdf_file, new_file)
+
+            else:
                 logger.info(f'------------ Không phát hiện qr code trong file {pdf_file}')
-                return pdf_file, None, "Không phát hiện qr code"
-
-            new_file = f'{basedir}/{qrcode_val}.pdf'
-
-            new_file = self.get_unique_filename(new_file)
-            logger.info(f'------------ QrCode renaming file {pdf_file} to: {new_file}')
-            os.rename(pdf_file, new_file)
-            return pdf_file, qrcode_val, None
+                new_file = pdf_file.replace('uploads', 'qrcode')
+                shutil.copyfile(pdf_file, new_file)
 
         except Exception as e:
             logger.info(f"Exception during QR code processing: {str(e)}")
@@ -165,6 +170,9 @@ class BarCode(viewsets.ViewSet):
     def convert_pdfs(self, pdf_file):
         try:
             dirname = os.path.dirname(pdf_file)
+            dirname = dirname.replace('uploads', 'barcode')
+            os.makedirs(dirname, exist_ok=True)
+
             try:
                 pages = convert_from_path(pdf_file, dpi=300, first_page=1, last_page=1)
             except Exception as e:
@@ -183,17 +191,18 @@ class BarCode(viewsets.ViewSet):
             # Đọc barcode trong vùng đã cắt
             barcodes = decode(cropped_image)
 
-            if not barcodes:
-                print("Không tìm thấy barcode")
+            if barcodes:
+                for barcode in barcodes:
+                    barcode_data = barcode.data.decode("utf-8")
+                    new_file = f"{dirname}/{barcode_data}.pdf"
+                    shutil.copyfile(pdf_file, new_file)
 
-            for barcode in barcodes:
-                barcode_data = barcode.data.decode("utf-8")
-                new_file = f"{dirname}/{barcode_data}.pdf"
-                try:
-                    os.rename(pdf_file, new_file)
-                    return barcode_data
-                except Exception as e:
-                    raise e
+            else:
+                print("Không tìm thấy barcode")
+                shutil.copyfile(pdf_file, pdf_file.replace('uploads', 'barcode'))
+
+
+
             logger.info("Hoàn tất")
         except Exception as e:
             logger.info(f"Lỗi: {str(e)}")
