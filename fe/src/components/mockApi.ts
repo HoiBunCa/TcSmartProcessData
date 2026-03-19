@@ -117,7 +117,8 @@ async function apiStartDetect(
   const res = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ session_id: sessionId, action: action}),
+    // Backend expects both session_id and action (used as output folder name)
+    body: JSON.stringify({ session_id: sessionId, action }),
   });
 
   const text = await res.text().catch(() => '');
@@ -137,6 +138,37 @@ async function apiStartDetect(
     data: json?.data ?? null,
     message: json?.message ?? 'Thành công',
   };
+}
+
+async function apiPdf2Layer(sessionId: string, settings: AppSettings): Promise<{ message: string }> {
+  const url = withBaseUrl(settings.API_BASE_URL, '/app/aidoc/pdf2layer/');
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (settings.API_TOKEN) headers.Authorization = `Bearer ${settings.API_TOKEN}`;
+
+  // Backend expects {session_id, action}. Here action is the output folder name.
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ session_id: sessionId, action: 'pdf2layer' }),
+  });
+
+  const text = await res.text().catch(() => '');
+  let json: any = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    // ignore
+  }
+
+  if (!res.ok) {
+    const msg = json?.message || json?.detail || text || res.statusText;
+    throw new Error(`pdf2layer failed (${res.status}): ${msg}`);
+  }
+
+  return { message: json?.message ?? json?.status ?? 'Thành công' };
 }
 
 function parseFilenameFromContentDisposition(cd: string | null) {
@@ -245,36 +277,35 @@ export async function mockProcess(
   files: Array<{ name: string; size: number }>,
   settings: AppSettings
 ): Promise<ProcessResult> {
-  // For QR/Barcode: call real API start endpoint.
-  // Note: backend renames files on disk; it currently doesn't return per-file output.
-  // To keep FE flow intact, we map the response to a synthetic per-file result list.
+  // QR/Barcode: call real API start endpoint.
+  // Note: backend creates files under /{action}/ folder; it doesn't return per-file output.
+  // We keep FE flow intact by mapping to a synthetic per-file result list.
   if (action === 'qrcode' || action === 'barcode') {
     const startRes = await apiStartDetect(action, sessionId, settings);
-    const results: ProcessResultItem[] = files.map((f) => ({
+    const mapped: ProcessResultItem[] = files.map((f) => ({
       inputName: f.name,
-      // best-effort placeholder (backend doesn't provide output filenames yet)
       outputName: makeOutputName(action, f.name),
       ok: true,
       message: startRes.message || 'Thành công',
     }));
-    return { sessionId, action, results };
+    return { sessionId, action, results: mapped };
   }
 
-  // pdf2layer: keep mock behavior for now
-
-  const results: ProcessResultItem[] = [];
-  for (const f of files) {
-    await sleep(50);
-    const ok = randOk(0.85);
-    results.push({
+  // pdf2layer: call real API
+  if (action === 'pdf2layer') {
+    const pdf2Res = await apiPdf2Layer(sessionId, settings);
+    const mapped: ProcessResultItem[] = files.map((f) => ({
       inputName: f.name,
-      outputName: ok ? makeOutputName(action, f.name) : f.name,
-      ok,
-      message: ok ? 'Processed successfully' : 'Failed (mock error)',
-    });
+      outputName: makeOutputName(action, f.name),
+      ok: true,
+      message: pdf2Res.message,
+    }));
+    return { sessionId, action, results: mapped };
   }
 
-  return { sessionId, action, results };
+  // Fallback (shouldn't happen)
+  await sleep(Math.min(Math.max(settings.TIME_SLEEP, 200), 2000));
+  return { sessionId, action, results: [] };
 }
 
 /**
@@ -287,8 +318,8 @@ export async function mockDownload(
   results: ProcessResultItem[],
   settings: AppSettings
 ): Promise<DownloadResult> {
-  // For QR/Barcode: download real result package from backend.
-  if (action === 'qrcode' || action === 'barcode') {
+  // Download real result package from backend (zip folder by action)
+  if (action === 'qrcode' || action === 'barcode' || action === 'pdf2layer') {
     return apiDownloadResult(sessionId, action, settings);
   }
 

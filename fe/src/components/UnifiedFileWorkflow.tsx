@@ -209,7 +209,7 @@ export default function UnifiedFileWorkflow() {
       {
         id: 'pdf2layer' as const,
         label: 'PDF 2 layer',
-        desc: 'Tạo PDF 2 lớp (mock, chỉ 1 API)',
+        desc: 'Tạo PDF 2 lớp',
         icon: FileType,
       },
     ],
@@ -346,7 +346,7 @@ export default function UnifiedFileWorkflow() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Bước 2: Chọn tác vụ (chỉ 1)</h3>
           <p className="text-sm text-gray-600 mb-4">
-            Bấm 1 option để xử lý toàn bộ file trong phiên (QR/Barcode: API thật, PDF2Layer: mock).
+            Bấm 1 option để xử lý toàn bộ file trong phiên.
           </p>
 
           <div className="grid grid-cols-1 gap-3">
@@ -423,7 +423,7 @@ export default function UnifiedFileWorkflow() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Xác nhận / Tải file</h3>
           <p className="text-sm text-gray-600">
-            Nút này sẽ call API download kết quả (QR/Barcode: API thật; PDF2Layer: file JSON mô phỏng).
+            Nút này sẽ call API download kết quả (trả về file zip).
           </p>
 
           <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">

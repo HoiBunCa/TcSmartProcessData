@@ -268,8 +268,6 @@ class Download(viewsets.ViewSet):
 
     @staticmethod
     def zip_session_folder(folder_path, zip_path):
-
-
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(folder_path):
                 for file in files:
