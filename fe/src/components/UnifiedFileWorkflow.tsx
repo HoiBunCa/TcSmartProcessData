@@ -221,7 +221,7 @@ export default function UnifiedFileWorkflow() {
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-800 mb-2">Xử lý file</h2>
         <p className="text-gray-600">
-          Gộp 3 chức năng vào 1 màn hình: Upload → chọn tác vụ → xem log → tải kết quả (mock).
+          Gộp 3 chức năng vào 1 màn hình: Upload → chọn tác vụ → xem log → tải kết quả.
         </p>
       </div>
 
@@ -346,7 +346,7 @@ export default function UnifiedFileWorkflow() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Bước 2: Chọn tác vụ (chỉ 1)</h3>
           <p className="text-sm text-gray-600 mb-4">
-            Bấm 1 option để gọi mock API xử lý toàn bộ file trong phiên.
+            Bấm 1 option để xử lý toàn bộ file trong phiên (QR/Barcode: API thật, PDF2Layer: mock).
           </p>
 
           <div className="grid grid-cols-1 gap-3">
@@ -423,7 +423,7 @@ export default function UnifiedFileWorkflow() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Xác nhận / Tải file</h3>
           <p className="text-sm text-gray-600">
-            Nút này sẽ call <span className="font-mono">mockDownload</span> và tải về 1 file JSON mô phỏng package kết quả.
+            Nút này sẽ call API download kết quả (QR/Barcode: API thật; PDF2Layer: file JSON mô phỏng).
           </p>
 
           <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">

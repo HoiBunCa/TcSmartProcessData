@@ -117,7 +117,7 @@ async function apiStartDetect(
   const res = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ session_id: sessionId, action: action }),
+    body: JSON.stringify({ session_id: sessionId, action: action}),
   });
 
   const text = await res.text().catch(() => '');
@@ -137,6 +137,63 @@ async function apiStartDetect(
     data: json?.data ?? null,
     message: json?.message ?? 'Thành công',
   };
+}
+
+function parseFilenameFromContentDisposition(cd: string | null) {
+  if (!cd) return null;
+  // Examples:
+  // - attachment; filename="abc.zip"
+  // - attachment; filename=abc.zip
+  // - attachment; filename*=UTF-8''abc%20def.zip
+  const filenameStar = cd.match(/filename\*=(?:UTF-8''|)([^;]+)/i);
+  if (filenameStar?.[1]) {
+    const raw = filenameStar[1].trim().replace(/^"|"$/g, '');
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  }
+  const filename = cd.match(/filename=([^;]+)/i);
+  if (filename?.[1]) return filename[1].trim().replace(/^"|"$/g, '');
+  return null;
+}
+
+async function apiDownloadResult(
+  sessionId: string,
+  action: ProcessAction,
+  settings: AppSettings
+): Promise<DownloadResult> {
+  const url = withBaseUrl(settings.API_BASE_URL, '/app/download/result/');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (settings.API_TOKEN) headers.Authorization = `Bearer ${settings.API_TOKEN}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ session_id: sessionId, action }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    let json: any = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      // ignore
+    }
+    const msg = json?.message || json?.detail || text || res.statusText;
+    throw new Error(`Download failed (${res.status}): ${msg}`);
+  }
+
+  const blob = await res.blob();
+  const cd = res.headers.get('content-disposition');
+  const filename =
+    parseFilenameFromContentDisposition(cd) || `result_${action}_${sessionId}`;
+
+  return { sessionId, filename, blob };
 }
 
 
@@ -231,6 +288,11 @@ export async function mockDownload(
   results: ProcessResultItem[],
   settings: AppSettings
 ): Promise<DownloadResult> {
+  // For QR/Barcode: download real result package from backend.
+  if (action === 'qrcode' || action === 'barcode') {
+    return apiDownloadResult(sessionId, action, settings);
+  }
+
   await sleep(Math.min(Math.max(settings.TIME_SLEEP, 200), 2000));
 
   const payload = {

@@ -127,27 +127,23 @@ class QrCode(viewsets.ViewSet):
         return None
 
     def convert_pdfs(self, pdf_file, action_detect):
-        try:
-            basedir = os.path.dirname(pdf_file)
-            new_basedir = basedir.replace('uploads', action_detect)
-            os.makedirs(new_basedir, exist_ok=True)
+        basedir = os.path.dirname(pdf_file)
+        new_basedir = basedir.replace('uploads', action_detect)
+        os.makedirs(new_basedir, exist_ok=True)
 
-            page_number, qrcode_val = self.process_page(pdf_file, 1)
+        page_number, qrcode_val = self.process_page(pdf_file, 1)
 
-            if qrcode_val:
-                new_file = f'{new_basedir}/{qrcode_val}.pdf'
-                new_file = self.get_unique_filename(new_file) # cần có hàm này để xử lý case 2 qr code có giá trị giống nhau
-                logger.info(f'------------ QrCode renaming file {pdf_file} to: {new_file}')
-                shutil.copyfile(pdf_file, new_file)
+        if qrcode_val:
+            new_file = f'{new_basedir}/{qrcode_val}.pdf'
+            new_file = self.get_unique_filename(new_file) # cần có hàm này để xử lý case 2 qr code có giá trị giống nhau
+            logger.info(f'------------ QrCode renaming file {pdf_file} to: {new_file}')
+            shutil.copyfile(pdf_file, new_file)
 
-            else:
-                logger.info(f'------------ Không phát hiện qr code trong file {pdf_file}')
-                new_file = pdf_file.replace('uploads', 'qrcode')
-                shutil.copyfile(pdf_file, new_file)
+        else:
+            logger.info(f'------------ Không phát hiện qr code trong file {pdf_file}')
+            new_file = pdf_file.replace('uploads', action_detect)
+            shutil.copyfile(pdf_file, new_file)
 
-        except Exception as e:
-            logger.info(f"Exception during QR code processing: {str(e)}")
-            return pdf_file, None, f"Exception: {str(e)}"
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def start(self, request, *args, **kwargs):
