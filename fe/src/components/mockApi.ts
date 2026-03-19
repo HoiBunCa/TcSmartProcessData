@@ -117,7 +117,7 @@ async function apiStartDetect(
   const res = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ session_id: sessionId }),
+    body: JSON.stringify({ session_id: sessionId, action: action }),
   });
 
   const text = await res.text().catch(() => '');

@@ -9,7 +9,9 @@ from pdf2image import convert_from_path
 from django.conf import settings
 from pyzbar.pyzbar import decode
 from django.core.cache import cache
+from django.http import FileResponse
 
+import zipfile
 import shutil
 import numpy as np
 import glob
@@ -124,10 +126,10 @@ class QrCode(viewsets.ViewSet):
                 return decoded[0]
         return None
 
-    def convert_pdfs(self, pdf_file):
+    def convert_pdfs(self, pdf_file, action_detect):
         try:
             basedir = os.path.dirname(pdf_file)
-            new_basedir = basedir.replace('uploads', 'qrcode')
+            new_basedir = basedir.replace('uploads', action_detect)
             os.makedirs(new_basedir, exist_ok=True)
 
             page_number, qrcode_val = self.process_page(pdf_file, 1)
@@ -151,6 +153,7 @@ class QrCode(viewsets.ViewSet):
     def start(self, request, *args, **kwargs):
 
         session_id = self.request.data.get('session_id')
+        action = self.request.data.get('action')
         files = File.objects.filter(session_id=session_id)
 
         if not len(files):
@@ -160,17 +163,17 @@ class QrCode(viewsets.ViewSet):
             for file in files:
                 path_file = os.path.join(settings.MEDIA_ROOT, file.file.name)
                 logger.info(f'------- xử lý file : {path_file}')
-                self.convert_pdfs(path_file)
+                self.convert_pdfs(path_file, action)
 
         return Response({"data": None, 'message': 'Thành công'}, status=200)
 
-
 class BarCode(viewsets.ViewSet):
 
-    def convert_pdfs(self, pdf_file):
+    @staticmethod
+    def convert_pdfs(pdf_file, action_detect):
         try:
             dirname = os.path.dirname(pdf_file)
-            dirname = dirname.replace('uploads', 'barcode')
+            dirname = dirname.replace('uploads', action_detect)
             os.makedirs(dirname, exist_ok=True)
 
             try:
@@ -210,6 +213,8 @@ class BarCode(viewsets.ViewSet):
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def start(self, request, *args, **kwargs):
         session_id = self.request.data.get('session_id')
+        action = self.request.data.get('action')
+
         files = File.objects.filter(session_id=session_id)
 
         if not len(files):
@@ -219,10 +224,9 @@ class BarCode(viewsets.ViewSet):
             for file in files:
                 path_file = os.path.join(settings.MEDIA_ROOT, file.file.name)
                 logger.info(f'------- xử lý file : {path_file}')
-                self.convert_pdfs(path_file)
+                self.convert_pdfs(path_file, action)
 
         return Response({"data": None, 'message': 'Thành công'}, status=200)
-
 
 class AiDoc(viewsets.ViewSet):
     def __init__(self, **kwargs):
@@ -326,3 +330,56 @@ class AiDoc(viewsets.ViewSet):
             cache.set(f"ocr_data_{folder_id}", data_ocr, timeout=3600)
 
             return Response({"data": f"{filename}"}, status=200)
+
+class Download(viewsets.ViewSet):
+
+    @staticmethod
+    def zip_session_folder(folder_path, zip_path):
+
+
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(folder_path):
+                for file in files:
+                    full_path = os.path.join(root, file)
+                    # giữ relative path trong zip
+                    arcname = os.path.relpath(full_path, folder_path)
+                    zipf.write(full_path, arcname)
+
+        return zip_path
+
+    @staticmethod
+    def delete_data(session_id):
+
+        # delete folder
+        file = File.objects.filter(session_id=session_id).first()
+        basedir = os.path.dirname(os.path.join(settings.MEDIA_ROOT, file.file.name))
+        if os.path.exists(basedir):
+            shutil.rmtree(basedir)
+
+        # delete database
+        File.objects.filter(session_id=session_id).delete()
+
+        # delete zip file
+        zip_path = f'{session_id}.zip'
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+
+
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def result(self, request, *args, **kwargs):
+        session_id = self.request.data.get('session_id')
+        action = self.request.data.get('action')
+
+        file = File.objects.filter(session_id=session_id).first()
+        src_file = os.path.join(settings.MEDIA_ROOT, file.file.name)
+        if os.path.exists(src_file):
+            basedir = os.path.dirname(src_file).replace('uploads', action)
+            logger.info(f"------------- Downloading folder: {basedir}")
+            zip_path = f'{session_id}.zip'
+            self.zip_session_folder(folder_path=basedir, zip_path=zip_path)
+            result_file = open(zip_path, 'rb')
+            self.delete_data(session_id=session_id)
+            return FileResponse(result_file, as_attachment=True, filename=zip_path)
+
+        return Response({"status": "error", 'message': 'Không tìm thấy file'}, status=500)
