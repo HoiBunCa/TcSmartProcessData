@@ -261,7 +261,6 @@ export async function mockProcess(
   }
 
   // pdf2layer: keep mock behavior for now
-  await sleep(Math.min(Math.max(settings.TIME_SLEEP, 200), 2000));
 
   const results: ProcessResultItem[] = [];
   for (const f of files) {
@@ -293,7 +292,6 @@ export async function mockDownload(
     return apiDownloadResult(sessionId, action, settings);
   }
 
-  await sleep(Math.min(Math.max(settings.TIME_SLEEP, 200), 2000));
 
   const payload = {
     sessionId,

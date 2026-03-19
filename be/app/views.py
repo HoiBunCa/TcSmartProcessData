@@ -9,7 +9,7 @@ from pdf2image import convert_from_path
 from django.conf import settings
 from pyzbar.pyzbar import decode
 from django.core.cache import cache
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse
 
 import zipfile
 import shutil
@@ -75,7 +75,7 @@ class FileUpload(viewsets.ViewSet):
                 "size": obj.size,
                 "url": request.build_absolute_uri(obj.file.url) if obj.file else None,
             })
-
+        logger.info(f'------------ File upload {session_id} ------------')
         return Response({"sessionId": session_id, "files": uploaded}, status=200)
 
 class QrCode(viewsets.ViewSet):
@@ -225,107 +225,44 @@ class BarCode(viewsets.ViewSet):
         return Response({"data": None, 'message': 'Thành công'}, status=200)
 
 class AiDoc(viewsets.ViewSet):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
-    def create_folder_aidoc(self, request, *args, **kwargs):
-        url = f'{settings.DOMAIN_AIDOC}/home/api/v1/folder'
-        payload = json.dumps(
-            {"parent_id": settings.PARENT_FOLDER_AIDOC, "folder_name": f"Dữ liệu OCR 2 lớp - {time.time()}",
-             "form_id": []})
-        logger.info(payload)
-        headers = {"Authorization": settings.TOKEN_AIDOC, "content-type": "application/json"}
-        response = requests.post(url, headers=headers, data=payload)
-        folder_id = response.json()["id"]
-        return Response({"status": "ok", "folder_id": folder_id}, status=200)
+    def pdf2layer(self, request, *args, **kwargs):
 
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
-    def upload_aidoc(self, request, *args, **kwargs):
-        folder_id = self.request.data.get('folder_id')
-        file_pdf_name = self.request.data.get('file_pdf')
-
-        src_path = settings.DATA_SRC_PATH
-        logger.info(f"========= src_path: {src_path}")
-        logger.info(f"========= file_pdf_name: {file_pdf_name}")
-        glob_files = glob.glob(f'{src_path}/**/{file_pdf_name}', recursive=True)
-        if len(glob_files):
-            file_path = glob_files[0]
-            logger.info(f"========= file_path: {file_path}")
-            url = f'{settings.DOMAIN_AIDOC}/home/api/v1/upload-file'
-            filename = os.path.basename(file_path)
-            payload = {"folder": folder_id, "get_value": 1}
-            files = [("file", (filename, open(file_path, "rb"), "application/pdf"))]
-            headers = {"Authorization": settings.TOKEN_AIDOC}
-            response = requests.post(url, headers=headers, data=payload, files=files)
-            return Response({"status": response.status_code}, status=response.status_code)
-
-        return Response({"status": "error"}, status=500)
-
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
-    def check_ocr_done(self, request, *args, **kwargs):
-
-        folder_id = self.request.query_params.get('folder_id')
-        total_files = int(self.request.query_params.get('total_files'))
-
-        url = f"{settings.DOMAIN_AIDOC}/home/api/v1/response-api/count_data_ocr_done/?folder_id={folder_id}"
+        url = f'{settings.DOMAIN_AIDOC}/home/api/v1/ocr-general/upload-and-download-pdf2layer'
+        payload = {"folder": 660690, "get_value": 1}
         headers = {"Authorization": settings.TOKEN_AIDOC}
-        response = requests.get(url, headers=headers)
-        processed = response.json()["data"]['count']
-        logger.info(f"========= processed: {processed} / {total_files}")
-        if processed < total_files:
-            return Response({"status": "ok", "data": "processing"}, status=200)
+
+        session_id = self.request.data.get('session_id')
+        action = self.request.data.get('action')
+        files = File.objects.filter(session_id=session_id)
+
+        if not len(files):
+            return Response({"data": None, 'message': 'Không tìm thấy file'}, status=500)
         else:
-            self.get_data_ocr_done(folder_id)
-            return Response({"status": "ok", "data": "ocr done"}, status=200)
+            for file in files:
+                file_path = os.path.join(settings.MEDIA_ROOT, file.file.name)
+                filename = os.path.basename(file_path)
+                dirname = os.path.dirname(file_path)
+                files = [("file", (filename, open(file_path, "rb"), "application/pdf"))]
 
-    def get_data_ocr_done(self, folder_id):
-        data_ocr = []
-        limit = 100
-        offset = 0
-        while True:
-            url = f"{settings.DOMAIN_AIDOC}/home/api/v1/response-api/get_data_ocr_done/" \
-                  f"?folder_id={folder_id}&limit={limit}&offset={offset}"
-            headers = {"Authorization": settings.TOKEN_AIDOC}
-            response = requests.get(url, headers=headers)
-            data = response.json()["data"]
-            if not data:
-                break
-            data_ocr.extend(data)
-            offset += limit
+                res =  requests.post(url, headers=headers, data=payload, files=files)
+                # response = HttpResponse(
+                #     res.content,
+                #     content_type=res.headers.get("Content-Type", "application/octet-stream")
+                # )
 
-        cache.set(f"ocr_data_{folder_id}", data_ocr, timeout=3600)
-        data_ocr = cache.get(f"ocr_data_{folder_id}", [])
-        logger.info(f"------------- get_data_ocr_done - data: {data_ocr}")
+                dirname = dirname.replace('uploads', action)
+                os.makedirs(dirname, exist_ok=True)
+                new_file = f"{dirname}/{filename}"
 
-    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
-    def download_file(self, request, *args, **kwargs):
+                logger.info(f"======== filename: {new_file}")
+                with open(new_file, "wb") as f:
+                    f.write(res.content)
+                # return response
 
-        folder_id = self.request.query_params.get('folder_id')
-        logger.info(f"------------- download_file - folder_id: {folder_id}")
-        data_ocr = cache.get(f"ocr_data_{folder_id}", [])
-        logger.info(f"------------- download_file - data: {data_ocr}")
+        return Response({"status": "success"}, status=200)
 
-        if not data_ocr:
-            return Response({"error": "no data"}, status=500)
-        else:
-            data = data_ocr.pop(0)
-            request_id = data["request_id"]
-            logger.info(f"----------- Downloading data: {data}")
-            filename = data["title"]
-            url = f"{settings.DOMAIN_AIDOC}/home/api/v1/ocr-general-demo/download-response/type"
-            payload = {"request_id": request_id, "type_export": "pdf"}
-            headers = {"accept": "application/json", "Authorization": settings.TOKEN_AIDOC}
-            response = requests.post(url, headers=headers, data=payload)
-            if response.status_code == 200:
-                os.makedirs("media/PDF_2_LAYER", exist_ok=True)
-                with open(f"media/PDF_2_LAYER/{filename}", "wb") as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-
-            cache.set(f"ocr_data_{folder_id}", data_ocr, timeout=3600)
-
-            return Response({"data": f"{filename}"}, status=200)
 
 class Download(viewsets.ViewSet):
 

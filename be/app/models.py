@@ -26,5 +26,8 @@ class File(models.Model):
     content_type = models.CharField(max_length=100, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    is_processed = models.BooleanField(default=False, db_comment="Đã được xử lý xong chưa")
+
+
     def __str__(self) -> str:
         return f"{self.original_name} ({self.session_id})"
